@@ -28,10 +28,10 @@ def get_model_for_tier(tier: str) -> str:
         OpenRouter model identifier
     """
     model_map = {
-        "fast": "cerebras/llama-3.3-70b",
-        "accurate": "deepseek/deepseek-chat",
-        "research": "qwen/qwen-2.5-72b-instruct",
-        "code": "anthropic/claude-3-5-haiku-20241022",
+        "fast": "openai/gpt-oss-120b",  # Cerebras ~2000 tok/sec
+        "accurate": "deepseek/deepseek-v3.2",
+        "research": "alibaba/tongyi-deepresearch-30b-a3b",
+        "code": "minimax/minimax-m2.1",
     }
     return model_map.get(tier.lower(), model_map["fast"])
 
