@@ -1,5 +1,10 @@
 """
-HTTP fetching with httpx and optional Tavily enhancement.
+HTTP fetching with Jina Reader, Tavily, and basic httpx fallback.
+
+Fetch priority chain:
+1. Jina Reader (free, renders JS)
+2. Tavily (if API key available, renders JS)
+3. Basic httpx + trafilatura (no JS rendering)
 """
 
 import httpx
@@ -20,7 +25,9 @@ class FetchError(Exception):
 
 async def fetch_url(url: str, timeout: int = 30000) -> str:
     """
-    Fetch URL content using httpx and extract clean text.
+    Fetch URL content with smart fallback chain.
+
+    Priority: Jina Reader → Tavily → Basic httpx
 
     Args:
         url: URL to fetch
@@ -28,6 +35,113 @@ async def fetch_url(url: str, timeout: int = 30000) -> str:
 
     Returns:
         Extracted text content (markdown-like format)
+
+    Raises:
+        FetchError: If all fetch methods fail
+    """
+    errors = []
+
+    # Try Jina Reader first (free, renders JS)
+    try:
+        content = await fetch_with_jina(url, timeout)
+        if content and len(content.strip()) > 100:  # Sanity check for real content
+            return content
+    except Exception as e:
+        errors.append(f"Jina: {e}")
+
+    # Try Tavily next (if key available, renders JS)
+    try:
+        content = await fetch_with_tavily(url)
+        if content and len(content.strip()) > 100:
+            return content
+    except Exception as e:
+        errors.append(f"Tavily: {e}")
+
+    # Fall back to basic httpx + trafilatura
+    try:
+        content = await fetch_basic(url, timeout)
+        if content:
+            return content
+    except Exception as e:
+        errors.append(f"Basic: {e}")
+
+    # All methods failed
+    raise FetchError(url, f"All fetch methods failed: {'; '.join(errors)}")
+
+
+async def fetch_with_jina(url: str, timeout: int = 30000) -> str:
+    """
+    Fetch URL using Jina Reader API (renders JavaScript).
+
+    Jina Reader is free and renders JS-heavy pages before extracting content.
+    Just prepend https://r.jina.ai/ to any URL.
+
+    Args:
+        url: URL to fetch
+        timeout: Timeout in milliseconds
+
+    Returns:
+        Rendered and extracted content as markdown
+    """
+    timeout_seconds = timeout / 1000
+    jina_url = f"https://r.jina.ai/{url}"
+
+    async with httpx.AsyncClient(
+        timeout=timeout_seconds,
+        follow_redirects=True,
+        headers={
+            "User-Agent": "Shutter/0.1 (Web Content Distillation Service)",
+            "Accept": "text/plain",  # Jina returns markdown with this
+        }
+    ) as client:
+        response = await client.get(jina_url)
+        response.raise_for_status()
+        return response.text
+
+
+async def fetch_with_tavily(url: str) -> str:
+    """
+    Fetch using Tavily SDK for JavaScript-rendered content.
+
+    Args:
+        url: URL to fetch
+
+    Returns:
+        Extracted page content
+
+    Raises:
+        Exception: If Tavily fails or no API key
+    """
+    tavily_key = get_api_key("tavily")
+
+    if not tavily_key:
+        raise ValueError("No Tavily API key configured")
+
+    from tavily import TavilyClient
+
+    client = TavilyClient(api_key=tavily_key)
+
+    # Use Tavily extract for single URL
+    result = client.extract(urls=[url])
+
+    if result and "results" in result and len(result["results"]) > 0:
+        content = result["results"][0].get("raw_content", "")
+        if content:
+            return content
+
+    raise ValueError("Tavily returned no content")
+
+
+async def fetch_basic(url: str, timeout: int = 30000) -> str:
+    """
+    Basic fetch using httpx and trafilatura (no JS rendering).
+
+    Args:
+        url: URL to fetch
+        timeout: Timeout in milliseconds
+
+    Returns:
+        Extracted text content
 
     Raises:
         FetchError: If fetching or extraction fails
@@ -85,53 +199,6 @@ def html_to_text(html: str) -> Optional[str]:
         deduplicate=True,
     )
     return extracted
-
-
-async def fetch_with_tavily(url: str, query: str) -> str:
-    """
-    Enhanced fetch using Tavily SDK for JavaScript-rendered content.
-
-    Falls back to basic fetch if Tavily API key is not available.
-
-    Args:
-        url: URL to fetch
-        query: Context for enhanced extraction
-
-    Returns:
-        Enhanced page content
-
-    Raises:
-        FetchError: If fetching fails
-    """
-    tavily_key = get_api_key("tavily")
-
-    if not tavily_key:
-        # Fall back to basic fetch if no Tavily key
-        return await fetch_url(url)
-
-    try:
-        from tavily import TavilyClient
-
-        client = TavilyClient(api_key=tavily_key)
-
-        # Use Tavily extract for single URL
-        result = client.extract(urls=[url])
-
-        if result and "results" in result and len(result["results"]) > 0:
-            # Return the raw content from Tavily
-            content = result["results"][0].get("raw_content", "")
-            if content:
-                return content
-
-        # Fall back if Tavily returned no content
-        return await fetch_url(url)
-
-    except ImportError:
-        # tavily-python not installed, fall back
-        return await fetch_url(url)
-    except Exception:
-        # Any Tavily error, fall back to basic fetch
-        return await fetch_url(url)
 
 
 def extract_domain(url: str) -> str:

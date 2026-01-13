@@ -70,6 +70,24 @@
 
 ---
 
+## ✅ v0.2 — JavaScript Rendering (COMPLETE)
+
+### Smart Fetch Chain
+- [x] Jina Reader integration (primary fetcher)
+  - [x] Free JS rendering via `r.jina.ai/{url}`
+  - [x] Returns clean markdown from rendered pages
+- [x] Tavily fallback (secondary fetcher)
+  - [x] Tavily SDK integration
+  - [x] JavaScript-rendered content handling
+- [x] Basic httpx + trafilatura (final fallback)
+  - [x] For simple HTML pages that don't need JS
+
+**Fetch priority chain:** Jina → Tavily → Basic httpx
+
+*Tested: Stripe pricing page now returns full fee breakdown (2.9% + 30¢, etc.) instead of "rates not provided"*
+
+---
+
 ## 🚀 v1.0 — Python Production
 
 ### Enhanced Features
@@ -77,19 +95,16 @@
   - [ ] Semantic pattern analysis
   - [ ] Multiple injection type detection
   - [ ] Confidence scoring
-- [ ] Tavily integration (src/grove_shutter/fetch.py)
-  - [ ] Tavily SDK integration
-  - [ ] JavaScript-rendered content handling
-  - [ ] Fallback to basic fetch if Tavily unavailable
-- [ ] All four model tiers
-  - [ ] Fast: Cerebras/Groq fastest model
-  - [ ] Accurate: DeepSeek V3.2
-  - [ ] Research: Tongyi DeepResearcher (Qwen3 30B-3B)
-  - [ ] Code: Minimax M2.1
-- [ ] Config management improvements
-  - [ ] ~/.shutter/config.toml persistent config
-  - [ ] Default model preferences
-  - [ ] Timeout configuration
+- [x] All four model tiers (OpenRouter)
+  - [x] Fast: openai/gpt-oss-120b (Cerebras ~2000 tok/sec)
+  - [x] Accurate: deepseek/deepseek-v3.2
+  - [x] Research: alibaba/tongyi-deepresearch-30b-a3b
+  - [x] Code: minimax/minimax-m2.1
+- [x] Config management
+  - [x] ~/.shutter/config.toml persistent config
+  - [x] Default model preferences
+  - [x] Timeout configuration
+  - [x] Interactive setup (`shutter setup`)
 
 ### Distribution
 - [ ] Prepare for PyPI release
