@@ -39,7 +39,7 @@ dev = [
 ]
 
 [project.scripts]
-shutter = "grove_shutter.cli:app"
+shutter = "grove_shutter.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/AutumnsGrove/Shutter"
