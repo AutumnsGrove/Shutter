@@ -3,13 +3,17 @@
 ## 🎯 Current Focus: v0.1 — Python Proof of Concept
 
 ### Pre-Development Research
-- [ ] Research extraction prompt techniques
-  - [ ] Check if Anthropic's web fetch prompt has leaked
-  - [ ] Survey Exa/Tavily/Perplexity extraction approaches
-  - [ ] Document patterns for different content types (articles, docs, pricing pages)
-- [ ] Catalog prompt injection patterns
-  - [ ] Research known web-based injection techniques
-  - [ ] Identify patterns for Canary detection logic
+- [x] Research extraction prompt techniques
+  - [x] Check if Anthropic's web fetch prompt has leaked (Yes - documented in docs/RESEARCH.md)
+  - [x] Survey Exa/Tavily/Perplexity extraction approaches (Complete - see docs/RESEARCH.md)
+  - [x] Document patterns for different content types (articles, docs, pricing pages)
+- [x] Catalog prompt injection patterns
+  - [x] Research known web-based injection techniques (CVEs, Unicode attacks, encoding)
+  - [x] Identify patterns for Canary detection logic (Regex patterns + semantic analysis)
+
+**Research artifacts:**
+- `docs/RESEARCH.md` - Comprehensive research findings
+- `docs/PROMPTS.md` - Synthesized extraction prompt design
 
 ### Core Implementation (v0.1)
 - [ ] Implement fetch layer (src/grove_shutter/fetch.py)
@@ -137,7 +141,7 @@
 
 ## Next Session Priorities
 
-1. **Pre-development research** - Understand existing extraction techniques
+1. ~~**Pre-development research**~~ COMPLETE - See docs/RESEARCH.md and docs/PROMPTS.md
 2. **Set up secrets** - Copy template, add real API keys
 3. **Start with fetch layer** - Get basic URL fetching working
 4. **Build incrementally** - Core → Canary → Extract → CLI
@@ -146,3 +150,4 @@
 
 *Last updated: 2026-01-13*
 *Current version: v0.1 (in development)*
+*Research phase completed: 2026-01-13*
