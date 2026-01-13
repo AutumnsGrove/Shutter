@@ -6,7 +6,7 @@ All SQL isolated in this file. Application code uses function-based interface.
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -56,7 +56,7 @@ def add_offender(domain: str, injection_type: str) -> None:
     """
     init_db()  # Ensure table exists
     conn = _get_connection()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         # Check if domain exists

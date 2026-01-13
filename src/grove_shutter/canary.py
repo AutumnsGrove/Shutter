@@ -27,11 +27,11 @@ INJECTION_PATTERNS = [
     (r"disregard\s+(all|previous|above)", "instruction_override"),
     (r"new\s+instructions?:", "instruction_override"),
     (r"<\s*system\s*>", "delimiter_injection"),
-    (r"\[INST\]|\[/INST\]", "delimiter_injection"),
+    (r"\[inst\]|\[/inst\]", "delimiter_injection"),
     (r"```\s*system", "delimiter_injection"),
     (r"act\s+as\s+(a\s+)?", "role_hijack"),
     (r"jailbreak", "jailbreak_attempt"),
-    (r"DAN\s+mode", "jailbreak_attempt"),
+    (r"dan\s+mode", "jailbreak_attempt"),
     (r"ignore\s+safety", "safety_bypass"),
 ]
 
@@ -260,8 +260,23 @@ def analyze_canary_output(output: str, original_query: str) -> Optional[PromptIn
     query_meaningful = query_words - common_words
     output_meaningful = output_words - common_words
 
+    # Check for overlap using prefix matching (simple stemming)
+    # This handles cases like "prices" vs "pricing", "contain" vs "contains"
+    def has_prefix_match(query_set: set, output_set: set, min_prefix: int = 4) -> bool:
+        """Check if any query word prefix matches any output word prefix."""
+        for q_word in query_set:
+            if len(q_word) < min_prefix:
+                continue
+            q_prefix = q_word[:min_prefix]
+            for o_word in output_set:
+                if len(o_word) >= min_prefix and o_word[:min_prefix] == q_prefix:
+                    return True
+        return False
+
     # If there's no overlap and we have meaningful query words
-    if query_meaningful and not (query_meaningful & output_meaningful):
+    has_overlap = bool(query_meaningful & output_meaningful) or has_prefix_match(query_meaningful, output_meaningful)
+
+    if query_meaningful and not has_overlap:
         # Check if it's a legitimate "not found" response
         not_found_phrases = ["not found", "no information", "doesn't contain",
                              "does not contain", "couldn't find", "could not find",
