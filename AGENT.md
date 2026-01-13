@@ -5,17 +5,25 @@
 ---
 
 ## Project Purpose
-[Fill in: What this project does - 1-2 sentences]
+Shutter is a web content distillation service that sits between LLM agents and raw web pages. It fetches URLs, uses a cheap/fast LLM to extract only relevant content based on a query, and returns clean, focused results. This provides token efficiency (200 tokens instead of 20,000) and prompt injection defense (raw page content never reaches the driver model).
 
 ## Tech Stack
-[Fill in: Technologies, frameworks, and languages used]
-- Language:
-- Framework:
-- Key Libraries:
-- Package Manager:
+- Language: Python 3.11+
+- CLI Framework: Typer
+- HTTP Client: httpx (async)
+- LLM Provider: OpenRouter
+- Enhanced Fetch: Tavily SDK (optional)
+- Database: SQLite (local offenders list)
+- Validation: Pydantic
+- Config: TOML (~/.shutter/config.toml)
+- Package Manager: UV
 
 ## Architecture Notes
-[Fill in: Key architectural decisions, patterns, or structure]
+- **2-Phase Canary Pattern**: Phase 1 runs minimal extraction (100-200 tokens) to detect prompt injection. Phase 2 runs full extraction only if Phase 1 passes. This creates a cheap LLM security layer.
+- **Offenders List**: SQLite database at ~/.shutter/offenders.db tracks domains with detected injections. Domains with ≥3 detections are skipped entirely.
+- **OpenRouter Abstraction**: Four model tiers (fast/accurate/research/code) map to different OpenRouter models for different use cases.
+- **database.py Pattern**: All SQL isolated in database.py; application code uses function-based interface.
+- **Future Cloudflare Port**: Python implementation (v0.1-v1.0) validates the concept. Cloudflare Workers port (v1.5+) follows once proven.
 
 ---
 
