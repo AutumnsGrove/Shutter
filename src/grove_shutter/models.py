@@ -3,7 +3,7 @@ Pydantic models for request/response validation.
 """
 
 from typing import Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -25,6 +25,8 @@ class PromptInjectionDetails:
     type: str
     snippet: str
     domain_flagged: bool
+    confidence: float = 1.0  # 0.0-1.0 confidence score
+    signals: list[str] = field(default_factory=list)  # Contributing detection signals
 
 
 @dataclass
@@ -46,3 +48,5 @@ class Offender:
     last_seen: datetime
     detection_count: int
     injection_types: list[str]
+    avg_confidence: float = 0.0  # Running average of detection confidence
+    max_confidence: float = 0.0  # Maximum confidence seen for this domain

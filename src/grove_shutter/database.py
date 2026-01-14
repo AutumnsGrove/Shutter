@@ -35,24 +35,38 @@ def init_db() -> None:
                 first_seen TEXT NOT NULL,
                 last_seen TEXT NOT NULL,
                 detection_count INTEGER NOT NULL DEFAULT 1,
-                injection_types TEXT NOT NULL
+                injection_types TEXT NOT NULL,
+                avg_confidence REAL NOT NULL DEFAULT 0.0,
+                max_confidence REAL NOT NULL DEFAULT 0.0
             )
         """)
+
+        # Migration: add confidence columns if they don't exist (for existing DBs)
+        cursor = conn.execute("PRAGMA table_info(offenders)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        if "avg_confidence" not in columns:
+            conn.execute("ALTER TABLE offenders ADD COLUMN avg_confidence REAL NOT NULL DEFAULT 0.0")
+        if "max_confidence" not in columns:
+            conn.execute("ALTER TABLE offenders ADD COLUMN max_confidence REAL NOT NULL DEFAULT 0.0")
+
         conn.commit()
     finally:
         conn.close()
 
 
-def add_offender(domain: str, injection_type: str) -> None:
+def add_offender(domain: str, injection_type: str, confidence: float = 1.0) -> None:
     """
     Add or update an offender in the database.
 
-    If domain exists, increments detection_count and updates last_seen.
+    If domain exists, increments detection_count, updates last_seen,
+    and recalculates confidence metrics.
     If new, creates record with detection_count=1.
 
     Args:
         domain: Domain name (e.g., "malicious.example.com")
         injection_type: Type of injection detected (e.g., "instruction_override")
+        confidence: Detection confidence score (0.0-1.0)
     """
     init_db()  # Ensure table exists
     conn = _get_connection()
@@ -61,7 +75,7 @@ def add_offender(domain: str, injection_type: str) -> None:
     try:
         # Check if domain exists
         cursor = conn.execute(
-            "SELECT detection_count, injection_types FROM offenders WHERE domain = ?",
+            "SELECT detection_count, injection_types, avg_confidence, max_confidence FROM offenders WHERE domain = ?",
             (domain,)
         )
         row = cursor.fetchone()
@@ -73,22 +87,29 @@ def add_offender(domain: str, injection_type: str) -> None:
             if injection_type not in existing_types:
                 existing_types.append(injection_type)
 
+            # Calculate running average: (old_avg * (n-1) + new_value) / n
+            old_avg = row["avg_confidence"] or 0.0
+            old_max = row["max_confidence"] or 0.0
+            new_avg = ((old_avg * (detection_count - 1)) + confidence) / detection_count
+            new_max = max(old_max, confidence)
+
             conn.execute(
                 """
                 UPDATE offenders
-                SET last_seen = ?, detection_count = ?, injection_types = ?
+                SET last_seen = ?, detection_count = ?, injection_types = ?,
+                    avg_confidence = ?, max_confidence = ?
                 WHERE domain = ?
                 """,
-                (now, detection_count, json.dumps(existing_types), domain)
+                (now, detection_count, json.dumps(existing_types), new_avg, new_max, domain)
             )
         else:
             # Insert new record
             conn.execute(
                 """
-                INSERT INTO offenders (domain, first_seen, last_seen, detection_count, injection_types)
-                VALUES (?, ?, ?, 1, ?)
+                INSERT INTO offenders (domain, first_seen, last_seen, detection_count, injection_types, avg_confidence, max_confidence)
+                VALUES (?, ?, ?, 1, ?, ?, ?)
                 """,
-                (domain, now, now, json.dumps([injection_type]))
+                (domain, now, now, json.dumps([injection_type]), confidence, confidence)
             )
 
         conn.commit()
@@ -123,6 +144,8 @@ def get_offender(domain: str) -> Optional[Offender]:
                 last_seen=datetime.fromisoformat(row["last_seen"]),
                 detection_count=row["detection_count"],
                 injection_types=json.loads(row["injection_types"]),
+                avg_confidence=row["avg_confidence"] or 0.0,
+                max_confidence=row["max_confidence"] or 0.0,
             )
         return None
     finally:
@@ -152,6 +175,8 @@ def list_offenders() -> List[Offender]:
                 last_seen=datetime.fromisoformat(row["last_seen"]),
                 detection_count=row["detection_count"],
                 injection_types=json.loads(row["injection_types"]),
+                avg_confidence=row["avg_confidence"] or 0.0,
+                max_confidence=row["max_confidence"] or 0.0,
             )
             for row in rows
         ]
@@ -161,18 +186,36 @@ def list_offenders() -> List[Offender]:
 
 def should_skip_fetch(domain: str) -> bool:
     """
-    Check if domain should be skipped entirely (≥3 detections).
+    Check if domain should be skipped entirely based on detection history.
+
+    Skip criteria (any of):
+    - detection_count >= 3 (original threshold)
+    - max_confidence >= 0.90 (single very high-confidence detection)
+    - avg_confidence >= 0.80 AND detection_count >= 2 (consistently suspicious)
 
     Args:
         domain: Domain name to check
 
     Returns:
-        True if domain has ≥3 detections and should be skipped
+        True if domain should be skipped
     """
     offender = get_offender(domain)
     if offender is None:
         return False
-    return offender.detection_count >= 3
+
+    # Original count-based threshold
+    if offender.detection_count >= 3:
+        return True
+
+    # Single very high-confidence detection
+    if offender.max_confidence >= 0.90:
+        return True
+
+    # Consistently suspicious pattern
+    if offender.avg_confidence >= 0.80 and offender.detection_count >= 2:
+        return True
+
+    return False
 
 
 def clear_offenders() -> None:

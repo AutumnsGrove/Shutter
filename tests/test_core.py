@@ -83,7 +83,7 @@ class TestShutterBasic:
             model="accurate"
         )
 
-        assert result.model_used == "deepseek/deepseek-chat"
+        assert result.model_used == "deepseek/deepseek-v3.2"
 
 
 class TestOffendersBlocking:
@@ -92,10 +92,10 @@ class TestOffendersBlocking:
     @pytest.mark.asyncio
     async def test_blocked_domain_skips_fetch(self, mock_env, monkeypatch):
         """Test that blocked domains skip fetch entirely."""
-        # Add domain to offenders list with 3 detections
-        database.add_offender("blocked.com", "test")
-        database.add_offender("blocked.com", "test")
-        database.add_offender("blocked.com", "test")
+        # Add domain to offenders list with 3 detections (use moderate confidence)
+        database.add_offender("blocked.com", "test", 0.70)
+        database.add_offender("blocked.com", "test", 0.70)
+        database.add_offender("blocked.com", "test", 0.70)
 
         # Mock fetch - should NOT be called
         mock_fetch = AsyncMock(return_value="Should not be called")
@@ -117,10 +117,11 @@ class TestOffendersBlocking:
 
     @pytest.mark.asyncio
     async def test_domain_below_threshold_allowed(self, mock_env, monkeypatch):
-        """Test that domains with <3 detections are allowed."""
-        # Add domain with only 2 detections
-        database.add_offender("partial.com", "test")
-        database.add_offender("partial.com", "test")
+        """Test that domains with <3 detections and low confidence are allowed."""
+        # Add domain with only 2 detections and low confidence
+        # (use low confidence to avoid triggering confidence-based skip)
+        database.add_offender("partial.com", "test", 0.65)
+        database.add_offender("partial.com", "test", 0.65)
 
         mock_fetch = AsyncMock(return_value="Test content")
         monkeypatch.setattr(core, "fetch_url", mock_fetch)

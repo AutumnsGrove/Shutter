@@ -91,10 +91,11 @@
 ## 🚀 v1.0 — Python Production
 
 ### Enhanced Features
-- [ ] Full Canary-based PI detection
-  - [ ] Semantic pattern analysis
-  - [ ] Multiple injection type detection
-  - [ ] Confidence scoring
+- [x] Full Canary-based PI detection
+  - [x] Semantic pattern analysis (17 weighted patterns)
+  - [x] Multiple injection type detection (instruction_override, role_hijack, etc.)
+  - [x] Confidence scoring (0.0-1.0 with multi-pattern boost)
+  - [x] Config-based weight overrides ([canary.weights] in config.toml)
 - [x] All four model tiers (OpenRouter)
   - [x] Fast: openai/gpt-oss-120b (Cerebras ~2000 tok/sec)
   - [x] Accurate: deepseek/deepseek-v3.2
@@ -169,5 +170,7 @@
 ---
 
 *Last updated: 2026-01-13*
-*Current version: v0.1 (complete)*
+*Current version: v0.2 (complete)*
 *v0.1 completed: 2026-01-13*
+*v0.2 (Jina/Tavily JS rendering): 2026-01-13*
+*Confidence scoring implemented: 2026-01-13*

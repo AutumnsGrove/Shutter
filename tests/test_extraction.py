@@ -11,35 +11,35 @@ class TestGetModelForTier:
     """Test suite for model tier mapping."""
 
     def test_fast_tier(self):
-        """Test fast tier maps to Cerebras model."""
+        """Test fast tier maps to Cerebras-hosted GPT-OSS model."""
         model = extraction.get_model_for_tier("fast")
-        assert model == "cerebras/llama-3.3-70b"
+        assert model == "openai/gpt-oss-120b"
 
     def test_accurate_tier(self):
-        """Test accurate tier maps to DeepSeek model."""
+        """Test accurate tier maps to DeepSeek v3.2 model."""
         model = extraction.get_model_for_tier("accurate")
-        assert model == "deepseek/deepseek-chat"
+        assert model == "deepseek/deepseek-v3.2"
 
     def test_research_tier(self):
-        """Test research tier maps to Qwen model."""
+        """Test research tier maps to Tongyi DeepResearch model."""
         model = extraction.get_model_for_tier("research")
-        assert model == "qwen/qwen-2.5-72b-instruct"
+        assert model == "alibaba/tongyi-deepresearch-30b-a3b"
 
     def test_code_tier(self):
-        """Test code tier maps to Claude Haiku model."""
+        """Test code tier maps to MiniMax m2.1 model."""
         model = extraction.get_model_for_tier("code")
-        assert model == "anthropic/claude-3-5-haiku-20241022"
+        assert model == "minimax/minimax-m2.1"
 
     def test_unknown_tier_defaults_to_fast(self):
         """Test that unknown tier falls back to fast."""
         model = extraction.get_model_for_tier("unknown")
-        assert model == "cerebras/llama-3.3-70b"
+        assert model == "openai/gpt-oss-120b"
 
     def test_case_insensitive(self):
         """Test that tier names are case-insensitive."""
-        assert extraction.get_model_for_tier("FAST") == "cerebras/llama-3.3-70b"
-        assert extraction.get_model_for_tier("Accurate") == "deepseek/deepseek-chat"
-        assert extraction.get_model_for_tier("RESEARCH") == "qwen/qwen-2.5-72b-instruct"
+        assert extraction.get_model_for_tier("FAST") == "openai/gpt-oss-120b"
+        assert extraction.get_model_for_tier("Accurate") == "deepseek/deepseek-v3.2"
+        assert extraction.get_model_for_tier("RESEARCH") == "alibaba/tongyi-deepresearch-30b-a3b"
 
 
 class TestBuildExtractionPrompt:
@@ -119,7 +119,7 @@ class TestExtractContent:
         assert "[DRY RUN]" in extracted
         assert tokens_in == 1000  # Mock value
         assert tokens_out == 50  # Mock value
-        assert model_used == "cerebras/llama-3.3-70b"
+        assert model_used == "openai/gpt-oss-120b"
 
     @pytest.mark.asyncio
     async def test_dry_run_uses_correct_model_tier(self, monkeypatch):
@@ -131,14 +131,14 @@ class TestExtractContent:
             query="Test",
             model="accurate"
         )
-        assert model_used == "deepseek/deepseek-chat"
+        assert model_used == "deepseek/deepseek-v3.2"
 
         _, _, _, model_used = await extraction.extract_content(
             content="Test",
             query="Test",
             model="code"
         )
-        assert model_used == "anthropic/claude-3-5-haiku-20241022"
+        assert model_used == "minimax/minimax-m2.1"
 
     @pytest.mark.asyncio
     async def test_raises_without_api_key(self, monkeypatch, tmp_path):

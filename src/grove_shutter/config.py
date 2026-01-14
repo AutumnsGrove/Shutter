@@ -125,6 +125,52 @@ def is_dry_run() -> bool:
     return os.getenv("SHUTTER_DRY_RUN", "").lower() in ("1", "true", "yes")
 
 
+def get_canary_settings() -> dict:
+    """
+    Get canary detection settings from config.
+
+    Users can configure:
+    - [canary] block_threshold (default 0.6)
+    - [canary.weights] to override pattern confidence weights
+
+    Example config.toml:
+    ```toml
+    [canary]
+    block_threshold = 0.7
+
+    [canary.weights]
+    instruction_override = 0.90  # Lower than default 0.95
+    role_hijack = 0.40           # Lower for "act as" false positives
+    ```
+
+    Returns:
+        Dict with 'block_threshold' and 'weight_overrides'
+    """
+    settings = {
+        "block_threshold": 0.6,  # Default
+        "weight_overrides": {},  # Type -> confidence overrides
+    }
+
+    # Load from config file
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "rb") as f:
+            toml_config = tomli.load(f)
+
+        # Get [canary] section
+        if "canary" in toml_config:
+            canary = toml_config["canary"]
+            if "block_threshold" in canary:
+                settings["block_threshold"] = float(canary["block_threshold"])
+
+            # Get [canary.weights] section
+            if "weights" in canary:
+                settings["weight_overrides"] = {
+                    k: float(v) for k, v in canary["weights"].items()
+                }
+
+    return settings
+
+
 def setup_config() -> None:
     """
     Interactive configuration setup on first run.

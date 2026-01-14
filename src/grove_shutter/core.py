@@ -47,6 +47,7 @@ async def shutter(
     if should_skip_fetch(domain):
         offender = get_offender(domain)
         detection_count = offender.detection_count if offender else 3
+        max_conf = offender.max_confidence if offender else 1.0
 
         return ShutterResponse(
             url=url,
@@ -59,6 +60,8 @@ async def shutter(
                 type="domain_blocked",
                 snippet=f"Domain has {detection_count} prior injection detections. Fetch skipped.",
                 domain_flagged=True,
+                confidence=max_conf,
+                signals=[f"blocked_count:{detection_count}"],
             ),
         )
 
@@ -100,8 +103,8 @@ async def shutter(
     if not is_dry_run():
         injection = await canary_check(content, query)
         if injection:
-            # Add to offenders list
-            add_offender(domain, injection.type)
+            # Add to offenders list with confidence
+            add_offender(domain, injection.type, injection.confidence)
 
             # Count content tokens approximately (1 token ≈ 4 chars)
             tokens_input = len(content) // 4

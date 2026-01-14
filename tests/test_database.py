@@ -195,16 +195,17 @@ class TestShouldSkipFetch:
 
     def test_skip_when_threshold_reached(self, temp_db):
         """Test that domain is skipped after 3 detections."""
-        database.add_offender("blocked.com", "test")
-        database.add_offender("blocked.com", "test")
-        database.add_offender("blocked.com", "test")
+        database.add_offender("blocked.com", "test", 0.70)
+        database.add_offender("blocked.com", "test", 0.70)
+        database.add_offender("blocked.com", "test", 0.70)
 
         assert database.should_skip_fetch("blocked.com") is True
 
     def test_no_skip_below_threshold(self, temp_db):
-        """Test that domain is not skipped below 3 detections."""
-        database.add_offender("allowed.com", "test")
-        database.add_offender("allowed.com", "test")
+        """Test that domain is not skipped below 3 detections with low confidence."""
+        # Use low confidence to avoid triggering confidence-based skip
+        database.add_offender("allowed.com", "test", 0.65)
+        database.add_offender("allowed.com", "test", 0.65)
 
         assert database.should_skip_fetch("allowed.com") is False
 
@@ -214,14 +215,38 @@ class TestShouldSkipFetch:
 
     def test_exactly_three_triggers_skip(self, temp_db):
         """Test that exactly 3 detections triggers skip (boundary test)."""
-        database.add_offender("boundary.com", "test")
+        database.add_offender("boundary.com", "test", 0.65)
         assert database.should_skip_fetch("boundary.com") is False
 
-        database.add_offender("boundary.com", "test")
+        database.add_offender("boundary.com", "test", 0.65)
         assert database.should_skip_fetch("boundary.com") is False
 
-        database.add_offender("boundary.com", "test")
+        database.add_offender("boundary.com", "test", 0.65)
         assert database.should_skip_fetch("boundary.com") is True
+
+    def test_skip_on_very_high_confidence(self, temp_db):
+        """Test that single very high confidence detection triggers skip."""
+        database.add_offender("dangerous.com", "instruction_override", 0.92)
+
+        # Should skip even with just 1 detection due to high confidence
+        assert database.should_skip_fetch("dangerous.com") is True
+
+    def test_skip_on_consistent_high_avg(self, temp_db):
+        """Test that consistently high avg confidence with 2+ detections triggers skip."""
+        database.add_offender("suspicious.com", "test", 0.85)
+        database.add_offender("suspicious.com", "test", 0.85)
+
+        # avg_confidence = 0.85, detection_count = 2
+        assert database.should_skip_fetch("suspicious.com") is True
+
+    def test_no_skip_low_avg_two_detections(self, temp_db):
+        """Test that low avg confidence with 2 detections doesn't trigger skip."""
+        database.add_offender("borderline.com", "test", 0.60)
+        database.add_offender("borderline.com", "test", 0.70)
+
+        # avg_confidence = 0.65, detection_count = 2
+        # Neither threshold met (avg < 0.80, max < 0.90, count < 3)
+        assert database.should_skip_fetch("borderline.com") is False
 
 
 class TestClearOffenders:
