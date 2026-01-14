@@ -114,7 +114,7 @@
   - [x] Add usage examples (docs/USAGE.md)
   - [x] Tag v1.0.0 release
 - [x] Publish to PyPI as `grove-shutter`
-- [ ] Test uvx one-liner: `uvx grove-shutter`
+- [x] Test uvx one-liner: `uvx --from grove-shutter shutter`
 - [x] Documentation
   - [x] API reference (docs/API.md)
   - [x] Usage guide (docs/USAGE.md)
