@@ -4,6 +4,10 @@
 
 > *Open. Capture. Close.*
 
+[![PyPI version](https://badge.fury.io/py/grove-shutter.svg)](https://badge.fury.io/py/grove-shutter)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ---
 
 ## Overview
@@ -25,16 +29,36 @@ uv add grove-shutter
 
 # Or via pip
 pip install grove-shutter
+
+# Or run directly without installing
+uvx grove-shutter --help
+```
+
+### First Run Setup
+
+```bash
+# Interactive setup (creates ~/.shutter/config.toml)
+shutter setup
+
+# Or set environment variables
+export OPENROUTER_API_KEY="sk-or-v1-..."
+export TAVILY_API_KEY="tvly-..."  # optional, for enhanced fetching
 ```
 
 ### CLI Usage
 
 ```bash
-# After installation
-shutter "https://example.com/pricing" --query "extract pricing tiers"
+# Basic extraction
+shutter "https://stripe.com/pricing" -q "What are the transaction fees?"
 
-# Or via uvx (no install required)
-uvx grove-shutter "https://example.com/pricing" --query "extract pricing tiers"
+# Choose model tier
+shutter "https://docs.python.org/3/library/asyncio.html" -q "How do I create a task?" --model code
+
+# View offenders list
+shutter offenders
+
+# Clear offenders list
+shutter clear-offenders
 ```
 
 ### Programmatic Usage
@@ -43,28 +67,22 @@ uvx grove-shutter "https://example.com/pricing" --query "extract pricing tiers"
 from grove_shutter import shutter
 
 result = await shutter(
-    url="https://example.com/pricing",
-    query="extract pricing tiers",
+    url="https://stripe.com/pricing",
+    query="What are the transaction fees?",
     model="fast",
     max_tokens=500
 )
 
 print(result.extracted)
-# Output: "Basic: $9/mo (1 user, 5GB). Pro: $29/mo (5 users, 50GB)..."
+# Output: "2.9% + 30¢ per successful card charge. Additional 0.5% for..."
+
+# Check for prompt injection
+if result.prompt_injection:
+    print(f"Injection detected: {result.prompt_injection.type}")
+    print(f"Confidence: {result.prompt_injection.confidence}")
 ```
 
 ## Configuration
-
-### First Run Setup
-
-```bash
-# Interactive setup
-shutter --setup
-
-# Or set environment variables
-export OPENROUTER_API_KEY="sk-or-v1-..."
-export TAVILY_API_KEY="tvly-..."  # optional, for enhanced fetching
-```
 
 ### Configuration File
 
@@ -79,6 +97,15 @@ tavily_key = "tvly-..."  # optional
 model = "fast"
 max_tokens = 500
 timeout = 30000
+
+# Optional: Tune prompt injection detection
+[canary]
+block_threshold = 0.6  # 0.0-1.0, lower = more sensitive
+
+[canary.weights]
+# Override confidence weights for specific patterns
+instruction_override = 0.95
+role_hijack = 0.40  # Lower if you get false positives on "act as" content
 ```
 
 ## Response Format
@@ -87,11 +114,11 @@ timeout = 30000
 
 ```json
 {
-  "url": "https://example.com/pricing",
-  "extracted": "Basic: $9/mo (1 user, 5GB). Pro: $29/mo (5 users, 50GB). Enterprise: custom pricing, contact sales.",
+  "url": "https://stripe.com/pricing",
+  "extracted": "2.9% + 30¢ per successful card charge. Additional 0.5% for manually entered cards. 1.5% for international cards.",
   "tokens_input": 24500,
   "tokens_output": 42,
-  "model_used": "deepseek/deepseek-chat",
+  "model_used": "openai/gpt-oss-120b",
   "prompt_injection": null
 }
 ```
@@ -104,93 +131,74 @@ timeout = 30000
   "extracted": null,
   "tokens_input": 8200,
   "tokens_output": 0,
-  "model_used": "deepseek/deepseek-chat",
+  "model_used": "",
   "prompt_injection": {
     "detected": true,
     "type": "instruction_override",
-    "snippet": "IGNORE ALL PREVIOUS INSTRUCTIONS...",
-    "domain_flagged": true
+    "snippet": "...IGNORE ALL PREVIOUS INSTRUCTIONS...",
+    "domain_flagged": true,
+    "confidence": 0.95,
+    "signals": ["instruction_override:0.95"]
   }
 }
 ```
 
-The `prompt_injection` object gives your agent enough information to decide how to proceed. The domain gets added to an offenders list for future reference.
+The `prompt_injection` object includes:
+- **confidence**: 0.0-1.0 score indicating detection certainty
+- **signals**: List of contributing detection signals for debugging
+- **domain_flagged**: Whether the domain was added to the offenders list
 
-## Model Preferences
+## Model Tiers
 
-| Value | Use Case | Model |
-|-------|----------|-------|
-| `fast` | Quick extractions, simple queries | Cerebras or Groq (fastest available) |
-| `accurate` | Complex extraction, nuanced content | DeepSeek V3.2 |
-| `research` | Web-optimized, longer analysis | Tongyi DeepResearcher (Qwen3 30B-3B) |
-| `code` | Technical docs, code extraction | Minimax M2.1 |
+| Tier | Use Case | Model | Speed |
+|------|----------|-------|-------|
+| `fast` | Quick extractions, simple queries | `openai/gpt-oss-120b` (Cerebras) | ~2000 tok/s |
+| `accurate` | Complex extraction, nuanced content | `deepseek/deepseek-v3.2` | ~200 tok/s |
+| `research` | Web-optimized, longer analysis | `alibaba/tongyi-deepresearch-30b-a3b` | ~150 tok/s |
+| `code` | Technical docs, code extraction | `minimax/minimax-m2.1` | ~300 tok/s |
 
 ## How It Works
 
-Shutter uses a **2-phase Canary approach** for prompt injection defense:
+### Fetch Chain
 
-**Phase 1: Canary Check**
-- Run extraction with minimal tokens (100-200)
-- Check for instruction-override patterns in output
+Shutter uses a smart fetch chain for JavaScript-rendered content:
+
+1. **Jina Reader** (primary) — Free JS rendering via `r.jina.ai/{url}`
+2. **Tavily** (fallback) — SDK-based JS rendering (requires API key)
+3. **Basic httpx** (final) — Direct HTML fetch with trafilatura extraction
+
+### Prompt Injection Defense
+
+Shutter uses a **2-phase Canary approach** with confidence scoring:
+
+**Phase 1: Heuristic Checks** (free)
+- 17 weighted regex patterns for injection attempts
+- Unicode hidden character detection
+- Base64 payload detection
+- Multi-pattern boost (2+ matches = higher confidence)
+
+**Phase 2: LLM Canary** (only if heuristics inconclusive)
+- Minimal extraction (100 tokens) with output analysis
+- Detects instruction-following and topic deviation
 - Cost: ~$0.001
 
-**Phase 2: Full Extraction** (only if Phase 1 passes)
-- Run full extraction with requested token limit
-- Cost: varies by model and content
-
-If Canary detects injection patterns, the request is halted and the domain is flagged.
+If confidence exceeds the threshold (default 0.6), extraction is blocked and the domain is flagged.
 
 ### Offenders List
 
-Shutter maintains a persistent list of domains where prompt injections have been detected:
+Shutter maintains a persistent SQLite database of flagged domains:
 
-- **Location**: `~/.shutter/offenders.db` (SQLite)
-- **Not on list**: Proceed normally
-- **On list, < 3 detections**: Proceed with warning in response
-- **On list, ≥ 3 detections**: Return early with warning, skip fetch entirely
+- **Location**: `~/.shutter/offenders.db`
+- **Skip conditions**:
+  - 3+ detections on the domain
+  - Single detection with confidence ≥ 0.90
+  - 2+ detections with average confidence ≥ 0.80
 
 This creates trial-and-error defense that improves over time.
 
-## Development Roadmap
+## Development
 
-### v0.1 — Python Proof of Concept
-- [ ] Core fetch + summarization logic
-- [ ] OpenRouter integration
-- [ ] Basic prompt injection detection
-- [ ] CLI with Typer
-- [ ] Local SQLite offenders list
-
-### v1.0 — Python Production
-- [ ] Full Canary-based PI detection
-- [ ] Tavily integration for enhanced fetching
-- [ ] All four model tiers (fast/accurate/research/code)
-- [ ] PyPI release (`grove-shutter`)
-- [ ] uvx one-liner support
-- [ ] Config management (~/.shutter/)
-
-### v1.5 — Cloudflare Port
-- [ ] Worker implementation (port from Python)
-- [ ] D1 shared offenders list
-- [ ] Durable Objects rate limiting
-- [ ] HTTP API with Heartwood auth
-- [ ] NPM package (`@groveengine/shutter`)
-- [ ] npx one-liner support
-
-### v2.0 — Search
-- [ ] Multi-URL search queries
-- [ ] Additional providers (Exa, Brave, etc.)
-- [ ] Result aggregation and deduplication
-
-### v3.0 — Caching & Intelligence
-- [ ] Content caching
-- [ ] Smart cache invalidation
-- [ ] Injection pattern learning
-
-## Contributing
-
-This is a Grove Engine project in early development. See [`docs/SPEC.md`](docs/SPEC.md) for the full specification and design decisions.
-
-For development setup:
+### Setup
 
 ```bash
 # Clone the repository
@@ -201,12 +209,49 @@ cd Shutter
 uv sync --dev
 
 # Run tests
-pytest
+uv run pytest
 
 # Format code
-black src/ tests/
-ruff check src/ tests/
+uv run black src/ tests/
+uv run ruff check src/ tests/
 ```
+
+### Test Coverage
+
+```bash
+# Run with coverage
+uv run pytest --cov=grove_shutter --cov-report=term-missing
+
+# Current: 120 tests passing
+```
+
+## Roadmap
+
+### v1.0 — Python Production (Current)
+- [x] Core fetch + extraction with OpenRouter
+- [x] Jina/Tavily fetch chain for JS rendering
+- [x] Canary-based prompt injection detection
+- [x] Confidence scoring (0.0-1.0)
+- [x] Config-based weight overrides
+- [x] SQLite offenders list with smart thresholds
+- [x] CLI with setup, offenders commands
+- [x] PyPI release (`grove-shutter`)
+
+### v1.5 — Cloudflare Port
+- [ ] TypeScript Workers implementation
+- [ ] D1 shared offenders list
+- [ ] HTTP API with authentication
+- [ ] NPM package (`@groveengine/shutter`)
+
+### v2.0 — Search
+- [ ] Multi-URL search queries
+- [ ] Additional providers (Exa, Brave)
+- [ ] Result aggregation and deduplication
+
+### v3.0 — Caching & Intelligence
+- [ ] Content caching (R2)
+- [ ] Injection pattern learning
+- [ ] Vectorize integration
 
 ## License
 

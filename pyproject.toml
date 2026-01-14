@@ -1,23 +1,36 @@
 [project]
 name = "grove-shutter"
-version = "0.1.0"
-description = "Web content distillation service - Open. Capture. Close."
+version = "1.0.0"
+description = "LLM-powered web content extraction with prompt injection defense. Open. Capture. Close."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
     { name = "Grove Engine", email = "contact@grove.place" }
 ]
-keywords = ["llm", "web-scraping", "content-extraction", "prompt-injection", "security"]
+keywords = [
+    "llm",
+    "web-scraping",
+    "content-extraction",
+    "prompt-injection",
+    "security",
+    "ai-agents",
+    "openrouter",
+    "web-fetch",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 
 dependencies = [

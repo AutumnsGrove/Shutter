@@ -108,17 +108,17 @@
   - [x] Interactive setup (`shutter setup`)
 
 ### Distribution
-- [ ] Prepare for PyPI release
-  - [ ] Polish pyproject.toml metadata
-  - [ ] Write comprehensive README
-  - [ ] Add usage examples
-  - [ ] Tag v1.0.0 release
-- [ ] Publish to PyPI as `grove-shutter`
+- [x] Prepare for PyPI release
+  - [x] Polish pyproject.toml metadata
+  - [x] Write comprehensive README
+  - [x] Add usage examples (docs/USAGE.md)
+  - [x] Tag v1.0.0 release
+- [x] Publish to PyPI as `grove-shutter`
 - [ ] Test uvx one-liner: `uvx grove-shutter`
-- [ ] Documentation
-  - [ ] API reference
-  - [ ] Usage guide
-  - [ ] Example integrations
+- [x] Documentation
+  - [x] API reference (docs/API.md)
+  - [x] Usage guide (docs/USAGE.md)
+  - [x] Example integrations
 
 ---
 
@@ -162,15 +162,15 @@
 
 ## Next Session Priorities
 
-1. ~~**v0.1 Implementation**~~ COMPLETE - All core functionality working
-2. **Integration testing** - Test with real OpenRouter API calls
-3. **PyPI preparation** - Polish for v1.0 release
-4. **Cloudflare port** - TypeScript Workers implementation
+1. ~~**v0.1 Implementation**~~ COMPLETE
+2. ~~**v0.2 JS Rendering**~~ COMPLETE
+3. ~~**v1.0 Python Production**~~ COMPLETE
+4. **Cloudflare port** - TypeScript Workers implementation (v1.5)
 
 ---
 
 *Last updated: 2026-01-13*
-*Current version: v0.2 (complete)*
+*Current version: v1.0.0*
 *v0.1 completed: 2026-01-13*
 *v0.2 (Jina/Tavily JS rendering): 2026-01-13*
-*Confidence scoring implemented: 2026-01-13*
+*v1.0.0 (PyPI release): 2026-01-13*
