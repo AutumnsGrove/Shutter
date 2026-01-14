@@ -8,6 +8,8 @@
 Shutter is a web content distillation service that sits between LLM agents and raw web pages. It fetches URLs, uses a cheap/fast LLM to extract only relevant content based on a query, and returns clean, focused results. This provides token efficiency (200 tokens instead of 20,000) and prompt injection defense (raw page content never reaches the driver model).
 
 ## Tech Stack
+
+### Python (v1.0)
 - Language: Python 3.11+
 - CLI Framework: Typer
 - HTTP Client: httpx (async)
@@ -16,7 +18,18 @@ Shutter is a web content distillation service that sits between LLM agents and r
 - Database: SQLite (local offenders list)
 - Validation: Pydantic
 - Config: TOML (~/.shutter/config.toml)
-- Package Manager: UV
+- Package Manager: **UV**
+
+### Cloudflare Workers (v1.5+)
+- Language: TypeScript
+- Runtime: Cloudflare Workers
+- Database: D1 (shared offenders list)
+- Package Manager: **pnpm** (NOT npm)
+- Build: wrangler
+
+### Package Manager Rules
+- **Python**: Always use `uv run` for commands
+- **Node.js/TypeScript**: Always use `pnpm` (never npm or yarn)
 
 ## Architecture Notes
 - **2-Phase Canary Pattern**: Phase 1 runs minimal extraction (100-200 tokens) to detect prompt injection. Phase 2 runs full extraction only if Phase 1 passes. This creates a cheap LLM security layer.

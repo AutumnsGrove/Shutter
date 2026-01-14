@@ -122,14 +122,32 @@
 
 ---
 
-## 🌐 v1.5 — Cloudflare Port
+## ✅ v1.5 — Cloudflare Port (COMPLETE)
 
-- [ ] Port Python implementation to TypeScript/Workers
-- [ ] Set up D1 database for shared offenders list
+### Core Implementation
+- [x] Port Python implementation to TypeScript/Workers
+  - [x] types.ts - All interfaces (ShutterRequest, ShutterResponse, etc.)
+  - [x] database.ts - D1 offenders list operations
+  - [x] fetch.ts - Jina → Tavily → fetch chain
+  - [x] canary.ts - 17 regex patterns, confidence scoring, LLM canary
+  - [x] extraction.ts - OpenRouter extraction with 4 model tiers
+  - [x] index.ts - Worker entry point with HTTP router
+- [x] Set up D1 database for shared offenders list
+- [x] Create HTTP API (no auth for v1.5)
+- [x] Deploy to workers.dev
+
+### Deployed
+- **URL**: https://shutter.m7jv4v7npb.workers.dev
+- **Endpoints**: /fetch, /extract, /offenders, /health
+
+### Deferred to v1.6
 - [ ] Implement Durable Objects rate limiting
-- [ ] Create HTTP API with authentication
+- [ ] Add authentication (API keys / Heartwood integration)
 - [ ] Publish NPM package `@groveengine/shutter`
-- [ ] Deploy to shutter.grove.place
+- [ ] Deploy to custom domain shutter.grove.place
+
+### Maintenance
+- [ ] **ROTATE OpenRouter API key** (exposed in chat session)
 
 ---
 
@@ -165,12 +183,14 @@
 1. ~~**v0.1 Implementation**~~ COMPLETE
 2. ~~**v0.2 JS Rendering**~~ COMPLETE
 3. ~~**v1.0 Python Production**~~ COMPLETE
-4. **Cloudflare port** - TypeScript Workers implementation (v1.5)
+4. ~~**Cloudflare port**~~ COMPLETE
+5. **v1.6** - Auth, rate limiting, NPM package, custom domain
 
 ---
 
 *Last updated: 2026-01-13*
-*Current version: v1.0.0*
+*Current version: v1.5.0*
 *v0.1 completed: 2026-01-13*
 *v0.2 (Jina/Tavily JS rendering): 2026-01-13*
 *v1.0.0 (PyPI release): 2026-01-13*
+*v1.5.0 (Cloudflare Workers): 2026-01-13*
