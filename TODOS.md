@@ -140,14 +140,114 @@
 - **URL**: https://shutter.m7jv4v7npb.workers.dev
 - **Endpoints**: /fetch, /extract, /offenders, /health
 
-### Deferred to v1.6
-- [ ] Implement Durable Objects rate limiting
-- [ ] Add authentication (API keys / Heartwood integration)
-- [ ] Publish NPM package `@groveengine/shutter`
-- [ ] Deploy to custom domain shutter.grove.place
-
 ### Maintenance
 - [ ] **ROTATE OpenRouter API key** (exposed in chat session)
+- [ ] Re-add secrets after key rotation: `wrangler secret put OPENROUTER_API_KEY`
+
+---
+
+## 🔐 v1.6 — Authentication & Production
+
+### Pre-Implementation Setup
+- [ ] **Rotate OpenRouter API key** (CRITICAL - do this first!)
+- [ ] Re-enable worker with new secrets
+- [ ] Register Shutter as OAuth client in groveauth
+  - Client ID: `shutter`
+  - Redirect URI: `https://shutter.grove.place/auth/callback`
+  - Scopes: `openid profile`
+
+### GroveAuth Integration
+
+**Reference:** `/projects/groveauth/` - OAuth 2.0 + PKCE implementation
+
+#### OAuth Flow Implementation
+- [ ] Add auth routes to Worker (`cloudflare/src/auth.ts`)
+  - [ ] `GET /auth/login` - Generate PKCE challenge, redirect to groveauth
+  - [ ] `GET /auth/callback` - Exchange code for tokens
+  - [ ] `POST /auth/refresh` - Refresh expired access tokens
+  - [ ] `POST /auth/logout` - Clear session
+
+#### PKCE Login Flow
+```
+1. User hits /auth/login
+2. Generate code_verifier (random 43-128 chars)
+3. Hash to code_challenge (SHA256 + base64url)
+4. Store code_verifier in KV (keyed by state param)
+5. Redirect to: groveauth.grove.place/login?
+   - client_id=shutter
+   - redirect_uri=https://shutter.grove.place/auth/callback
+   - response_type=code
+   - scope=openid profile
+   - state={random}
+   - code_challenge={hash}
+   - code_challenge_method=S256
+6. User authenticates with groveauth
+7. Groveauth redirects to /auth/callback?code=XXX&state=YYY
+8. Exchange code + code_verifier for tokens
+9. Return access_token to client
+```
+
+#### JWT Verification Middleware
+- [ ] Create auth middleware (`cloudflare/src/middleware/auth.ts`)
+  - [ ] Fetch JWKS from groveauth (cache in KV)
+  - [ ] Verify RS256 JWT signatures
+  - [ ] Check token expiration
+  - [ ] Extract user claims (sub, email, name)
+- [ ] Protect routes: `/fetch`, `/extract` (require valid token)
+- [ ] Keep public: `/health`, `/auth/*`
+
+#### Token Management
+- [ ] Store refresh tokens securely (encrypted in KV or D1)
+- [ ] Implement automatic token refresh before expiry
+- [ ] Handle token revocation gracefully
+
+### KV Storage Setup
+- [ ] Create KV namespace for auth state
+  ```bash
+  wrangler kv namespace create SHUTTER_AUTH
+  ```
+- [ ] Add to wrangler.toml
+- [ ] Store: PKCE state, JWKS cache, rate limit counters
+
+### Rate Limiting (Durable Objects)
+- [ ] Create RateLimiter Durable Object class
+- [ ] Implement sliding window algorithm
+- [ ] Limits per user (by JWT sub claim):
+  - [ ] 100 requests/minute for /fetch
+  - [ ] 1000 requests/day total
+- [ ] Return 429 with Retry-After header when exceeded
+
+### Custom Domain Deployment
+- [ ] Configure `shutter.grove.place` in Cloudflare DNS
+- [ ] Update wrangler.toml with custom route
+  ```toml
+  routes = [{ pattern = "shutter.grove.place", custom_domain = true }]
+  ```
+- [ ] Deploy and verify SSL
+
+### NPM Package (`@groveengine/shutter`)
+- [ ] Create npm-package/ directory structure
+  ```
+  npm-package/
+  ├── src/
+  │   ├── index.ts      # Main exports
+  │   ├── client.ts     # HTTP client for shutter.grove.place
+  │   └── standalone.ts # Standalone mode (user's own API key)
+  ├── bin/
+  │   └── shutter.ts    # CLI entry point
+  ├── package.json
+  └── tsconfig.json
+  ```
+- [ ] Implement ShutterClient class with auth flow
+- [ ] CLI commands: `shutter login`, `shutter fetch <url> -q <query>`
+- [ ] Publish to npm with `@groveengine` scope
+
+### Testing v1.6
+- [ ] Test OAuth flow end-to-end
+- [ ] Test JWT verification with expired/invalid tokens
+- [ ] Test rate limiting behavior
+- [ ] Test custom domain routing
+- [ ] Verify NPM package works: `npx @groveengine/shutter`
 
 ---
 
@@ -180,11 +280,24 @@
 
 ## Next Session Priorities
 
-1. ~~**v0.1 Implementation**~~ COMPLETE
-2. ~~**v0.2 JS Rendering**~~ COMPLETE
-3. ~~**v1.0 Python Production**~~ COMPLETE
-4. ~~**Cloudflare port**~~ COMPLETE
-5. **v1.6** - Auth, rate limiting, NPM package, custom domain
+### 🚨 IMMEDIATE (Start of Session)
+1. **Rotate OpenRouter API key** - Key was exposed in chat, must rotate before re-enabling worker
+2. **Re-add secrets to worker** - `wrangler secret put OPENROUTER_API_KEY` (and TAVILY_API_KEY)
+
+### 🔐 v1.6 Implementation Order
+1. **Register Shutter as groveauth client** - Coordinate with groveauth project
+2. **KV namespace setup** - `wrangler kv namespace create SHUTTER_AUTH`
+3. **Auth routes** - `/auth/login`, `/auth/callback`, `/auth/refresh`
+4. **JWT middleware** - Protect `/fetch` and `/extract` routes
+5. **Custom domain** - Deploy to `shutter.grove.place`
+6. **Rate limiting** - Durable Objects per-user limits
+7. **NPM package** - `@groveengine/shutter` CLI wrapper
+
+### Completed Milestones
+- ~~**v0.1 Implementation**~~ COMPLETE
+- ~~**v0.2 JS Rendering**~~ COMPLETE
+- ~~**v1.0 Python Production**~~ COMPLETE
+- ~~**v1.5 Cloudflare port**~~ COMPLETE (worker deployed, secrets removed for security)
 
 ---
 
@@ -194,3 +307,20 @@
 *v0.2 (Jina/Tavily JS rendering): 2026-01-13*
 *v1.0.0 (PyPI release): 2026-01-13*
 *v1.5.0 (Cloudflare Workers): 2026-01-13*
+
+---
+
+## Quick Reference
+
+### GroveAuth Endpoints
+- `GET /login` - OAuth login with PKCE
+- `POST /token` - Exchange code for tokens
+- `POST /token/refresh` - Refresh access token
+- `GET /verify` - Validate JWT
+- `GET /userinfo` - Get user profile
+- `GET /.well-known/jwks.json` - Public keys for JWT verification
+
+### Worker Status
+- **Deployed URL**: https://shutter.m7jv4v7npb.workers.dev
+- **Status**: Disabled (secrets removed)
+- **D1 Database**: shutter-offenders (056aeb20-48d5-405a-bebc-e167817df0c0)
