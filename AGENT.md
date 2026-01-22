@@ -55,8 +55,10 @@ Shutter is a web content distillation service that sits between LLM agents and r
 
 ### TODO Management
 - **Always check `TODOS.md` first** when starting a task or session
+- **Check `COMPLETED.md`** for context on past decisions and implementation details
 - **Update immediately** when tasks are completed, added, or changed
-- Keep the list current and manageable
+- **Move completed tasks** from `TODOS.md` to `COMPLETED.md` to keep the TODO list focused
+- Keep both lists current and accurate
 
 ### Git Workflow Essentials
 
@@ -80,6 +82,16 @@ docs: Update README
 
 **For complete details:** See `AgentUsage/git_guide.md`
 
+### Pull Requests
+
+Use conventional commits format for PR titles:
+```
+feat: Add dark mode toggle
+fix: Correct timezone bug
+```
+
+Write a brief description of what the PR does and why. No specific format required.
+
 ---
 
 ## When to Use Skills
@@ -101,8 +113,15 @@ docs: Update README
 - **Before creating pyproject.toml** → Use skill: `uv-package-manager`
 - **When managing Python dependencies** → Use skill: `uv-package-manager`
 
+### Authentication
+- **When adding sign-in to a Grove app** → Use skill: `heartwood-auth`
+- **When protecting admin routes** → Use skill: `heartwood-auth`
+- **When validating user sessions** → Use skill: `heartwood-auth`
+- **When integrating with Heartwood (GroveAuth)** → Use skill: `heartwood-auth`
+
 ### Version Control
 - **Before making a git commit** → Use skill: `git-workflows`
+- **Before creating a pull request** → Use skill: `git-workflows`
 - **When initializing a new repo** → Use skill: `git-workflows`
 - **For git workflow and branching** → Use skill: `git-workflows`
 - **When setting up git hooks** → Use skill: `git-hooks`
@@ -118,6 +137,7 @@ docs: Update README
 - **For systematic investigation** → Use skill: `research-strategy`
 
 ### Testing
+- **When deciding what to test or reviewing test quality** → Use skill: `grove-testing`
 - **Before writing Python tests** → Use skill: `python-testing`
 - **Before writing JavaScript/TypeScript tests** → Use skill: `javascript-testing`
 - **Before writing Go tests** → Use skill: `go-testing`
@@ -141,6 +161,39 @@ docs: Update README
 - **When building terminal interfaces** → Use skill: `rich-terminal-output`
 - **For Rich library patterns** → Use skill: `rich-terminal-output`
 
+### Grove UI Design
+- **When creating or enhancing Grove pages** → Use skill: `grove-ui-design`
+- **When adding decorative nature elements** → Use skill: `grove-ui-design`
+- **When implementing glassmorphism effects** → Use skill: `grove-ui-design`
+- **When working with seasonal themes** → Use skill: `grove-ui-design`
+- **When building navigation patterns** → Use skill: `grove-ui-design`
+
+### Grove Documentation
+- **When writing help center articles** → Use skill: `grove-documentation`
+- **When drafting specs or technical docs** → Use skill: `grove-documentation`
+- **When writing user-facing text** → Use skill: `grove-documentation`
+- **When writing onboarding, tooltips, or error messages** → Use skill: `grove-documentation`
+- **When reviewing docs for voice consistency** → Use skill: `grove-documentation`
+
+### Grove Specifications
+- **When creating new technical specifications** → Use skill: `grove-spec-writing`
+- **When reviewing specs for completeness** → Use skill: `grove-spec-writing`
+- **When standardizing spec formatting** → Use skill: `grove-spec-writing`
+
+### Museum Documentation
+- **When writing documentation meant to be read by Wanderers** → Use skill: `museum-documentation`
+- **When creating "how it works" content for knowledge base** → Use skill: `museum-documentation`
+- **When documenting a codebase or system for curious visitors** → Use skill: `museum-documentation`
+- **When writing elegant, narrative-driven technical explanations** → Use skill: `museum-documentation`
+
+### Grove Naming
+- **When naming a new service or feature** → Use skill: `walking-through-the-grove`
+- **When finding a Grove-themed name** → Use skill: `walking-through-the-grove`
+
+### Package Publishing
+- **When publishing to npm** → Use skill: `npm-publish`
+- **Before npm package releases** → Use skill: `npm-publish`
+
 ---
 
 ## Quick Reference
@@ -160,12 +213,14 @@ Skills are invoked using the Skill tool. When a situation matches a skill trigge
 ### Available Skills Reference
 | Skill | Purpose |
 |-------|---------|
+| `heartwood-auth` | Heartwood (GroveAuth) integration, sign-in, sessions |
 | `secrets-management` | API keys, credentials, secrets.json |
 | `api-integration` | External REST API integration |
 | `database-management` | SQLite, database.py patterns |
 | `git-workflows` | Commits, branching, conventional commits |
 | `git-hooks` | Pre-commit hooks setup |
 | `uv-package-manager` | Python dependencies with UV |
+| `grove-testing` | Testing philosophy, what/when to test |
 | `python-testing` | pytest, fixtures, mocking |
 | `javascript-testing` | Vitest/Jest testing |
 | `go-testing` | Go testing patterns |
@@ -177,6 +232,12 @@ Skills are invoked using the Skill tool. When a situation matches a skill trigge
 | `cloudflare-deployment` | Workers, KV, R2, D1 |
 | `svelte5-development` | Svelte 5 with runes |
 | `rich-terminal-output` | Terminal UI with Rich |
+| `grove-ui-design` | Glassmorphism, seasons, forests, warm UI |
+| `grove-documentation` | Grove voice, help articles, user-facing text |
+| `grove-spec-writing` | Technical specifications with Grove formatting |
+| `museum-documentation` | Elegant, narrative documentation for Wanderers |
+| `walking-through-the-grove` | Finding Grove-themed names for new services |
+| `npm-publish` | npm package publishing workflow |
 | `research-strategy` | Systematic research |
 
 ---
@@ -223,5 +284,5 @@ For in-depth reference beyond what skills provide, see:
 
 ---
 
-*Last updated: 2025-12-22*
+*Last updated: 2026-01-22*
 *Model: Claude Opus 4.5*
