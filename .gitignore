@@ -61,6 +61,7 @@ dmypy.json
 
 # Project-specific
 .shutter/  # User config directory (when testing locally)
+.baseproject-backup-*/  # BaseProject update backups
 
 # OS
 .DS_Store
